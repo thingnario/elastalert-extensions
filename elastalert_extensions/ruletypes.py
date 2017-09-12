@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from elastalert.ruletypes import CompareRule
+from elastalert.ruletypes import BlacklistRule, CompareRule
 from elastalert.util import hashable, lookup_es_key, elastalert_logger
 
 
@@ -70,3 +70,15 @@ class BlacklistDurationRule(CompareRule):
             elastalert_logger.debug("Description of the changed records  " +
                                     str(dict(match.items() + extra.items())))
         super(BlacklistDurationRule, self).add_match(dict(match.items() + extra.items()))
+
+
+class CompoundBlacklistRule(BlacklistRule):
+    """ A CompareRule where the compare function checks a given key against a blacklist """
+    def compare(self, event):
+        terms = lookup_es_key(event, self.rules['compare_key'])
+        if not isinstance(terms, list):
+            terms = [terms]
+        for term in terms:
+            if term in self.rules['blacklist']:
+                return True
+        return False
