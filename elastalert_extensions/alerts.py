@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, print_function, unicode_literals
 from datetime import time
 from dateutil import parser
 from elastalert import alerts
+from kombu import Connection, Exchange
+from kombu.pools import producers
+from os import environ, path
 from pytz import timezone
 
 
@@ -61,3 +65,56 @@ class ScheduledAlerter(object):
 
 class ScheduledDebugAlerter(ScheduledAlerter, alerts.DebugAlerter):
     pass
+
+
+class AmqpAlerter(alerts.Alerter):
+    """ The amqp alerter publishes alerts via amqp to a broker. """
+    def __init__(self, rule):
+        super(AmqpAlerter, self).__init__(rule)
+        params = {
+            'host': self.get_param('amqp_host', 'mq'),
+            'port': int(self.get_param('amqp_port', '5672')),
+            'vhost': self.get_param('amqp_vhost', '/'),
+            'username': self.get_param('amqp_username', 'guest'),
+            'password': self.get_param('amqp_password', None),
+        }
+        if not params['password']:
+            with open(path.join('/', 'config', params['username']), 'r') as pwd_file:
+                params['password'] = pwd_file.read()
+        self._url = (
+            'amqp://{username}:{password}@{host}:{port}/{vhost}'
+            .format(**params)
+        )
+        exchange = self.get_param('amqp_exchange', 'alert')
+        self._exchange = Exchange(exchange, type='fanout')
+        self._routing_key = self.get_param('amqp_routing_key', 'alert')
+        self._conn = None
+
+    def get_param(self, name, default):
+        environ_name = name.upper()
+        return self.rule.get(name, environ.get(environ_name, default))
+
+    def alert(self, matches):
+        body = {
+            'rule': self.rule['name'],
+            'matches': matches,
+        }
+
+        with producers[self.conn()].acquire(block=True) as producer:
+            for match in matches:
+                body = {
+                    'rule': self.rule['name'],
+                    'match': match,
+                }
+                producer.publish(body,
+                                 serializer='json',
+                                 exchange=self._exchange,
+                                 routing_key=self._routing_key)
+
+    def conn(self):
+        if not self._conn:
+            self._conn = Connection(self._url)
+        return self._conn
+
+    def get_info(self):
+        return {'type': 'amqp'}

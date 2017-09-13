@@ -22,6 +22,7 @@ setup(
     package_data={},
     install_requires=[
         'elastalert>=0.1.17',
+        'kombu==4.1.0',
         'pytz>=2017.2',
         'python-dateutil==2.6.1',
     ]
