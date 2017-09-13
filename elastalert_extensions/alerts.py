@@ -48,7 +48,15 @@ class ScheduledAlerter(object):
     def alert(self, matches):
         matches = filter(self.in_timeframe, matches)
         if matches:
-            alerts.DebugAlerter.alert(self, matches)
+            self.alerter.alert(self, matches)
+
+    def get_info(self):
+        if self.alerter:
+            info = self.alert.get_info(self)
+        else:
+            info = {'type': ''}
+        info['type'] = 'scheduled_{}'.format(info['type'])
+        return info
 
 
 class ScheduledDebugAlerter(ScheduledAlerter, alerts.DebugAlerter):
