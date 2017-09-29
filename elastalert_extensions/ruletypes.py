@@ -133,7 +133,7 @@ class ProfiledFrequencyRule(FrequencyRule):
                 elastalert_logger.info('Reloading profile %s', profile_path)
                 with open(profile_path, 'r') as profile_file:
                     profile = json.load(profile_file)
-                    self._profile = {k: timedelta(**profile[k])
+                    self._profile = {k: timedelta(seconds=profile[k])
                                      for k in profile}
                     self._profile_ts = ts
                     self._update_ts = now
@@ -212,7 +212,7 @@ class ProfiledFrequencyRule(FrequencyRule):
 
 class ProfiledFlatlineRule(ProfiledFrequencyRule):
     """ A rule that matches when there is a low number of events given a timeframe. """
-    required_options = frozenset(['timeframe', 'threshold'])
+    required_options = frozenset(['threshold', 'timeframe', 'profile'])
 
     def __init__(self, *args):
         super(ProfiledFlatlineRule, self).__init__(*args)
