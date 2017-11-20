@@ -210,16 +210,19 @@ class ProfiledFrequencyRule(FrequencyRule):
         return message
 
 
-class ProfiledFlatlineRule(ProfiledFrequencyRule):
+class ProfiledThresholdRule(ProfiledFrequencyRule):
     """ A rule that matches when there is a low number of events given a timeframe. """
     required_options = frozenset(['threshold', 'timeframe', 'profile'])
 
     def __init__(self, *args):
-        super(ProfiledFlatlineRule, self).__init__(*args)
+        super(ProfiledThresholdRule, self).__init__(*args)
         self.threshold = self.rules['threshold']
+        self.above = self.rules.get('above_name', 'above')
+        self.below = self.rules.get('below_name', 'below')
 
         # Dictionary mapping query keys to the first events
         self.first_event = {}
+        self._last_status = {}
 
     def check_for_match(self, key, end=True):
         # This function gets called between every added document with end=True after the last
@@ -237,11 +240,13 @@ class ProfiledFlatlineRule(ProfiledFrequencyRule):
 
         # Match if, after removing old events, we hit num_events
         count = self.occurrences[key].count()
-        if count < self.rules['threshold']:
+        status = self.below if count < self.rules['threshold'] else self.above
+
+        if status != self._last_status.get(key, None):
             # Do a deep-copy, otherwise we lose the datetime type
             # in the timestamp field of the last event
             event = copy.deepcopy(self.occurrences[key].data[-1][0])
-            event.update(key=key, count=count)
+            event.update(key=key, count=count, status=status)
             self.add_match(event)
 
             # After adding this match, leave the occurrences windows alone since it will
@@ -250,6 +255,8 @@ class ProfiledFlatlineRule(ProfiledFrequencyRule):
             least_recent_ts = self.get_ts(self.occurrences[key].data[0])
             timeframe_ago = most_recent_ts - self.timeframe(key)
             self.first_event[key] = min(least_recent_ts, timeframe_ago)
+
+        self._last_status[key] = status
 
     def get_match_str(self, match):
         ts = match[self.rules['timestamp_field']]
