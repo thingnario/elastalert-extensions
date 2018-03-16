@@ -219,10 +219,11 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
         self.threshold = self.rules['threshold']
         self.above = self.rules.get('above_name', 'above')
         self.below = self.rules.get('below_name', 'below')
+        self._cache_path = self.rules.get('cache_path')
 
         # Dictionary mapping query keys to the first events
         self.first_event = {}
-        self._last_status = {}
+        self._last_status = self._load_status()
 
     def check_for_match(self, key, end=True):
         # This function gets called between every added document with end=True after the last
@@ -242,7 +243,7 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
         count = self.occurrences[key].count()
         status = self.below if count < self.rules['threshold'] else self.above
 
-        if status != self._last_status.get(key, None):
+        if status != self._get_status(key):
             # Do a deep-copy, otherwise we lose the datetime type
             # in the timestamp field of the last event
             event = copy.deepcopy(self.occurrences[key].data[-1][0])
@@ -256,7 +257,7 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
             timeframe_ago = most_recent_ts - self.timeframe(key)
             self.first_event[key] = min(least_recent_ts, timeframe_ago)
 
-        self._last_status[key] = status
+            self._set_status(key, status)
 
     def get_match_str(self, match):
         ts = match[self.rules['timestamp_field']]
@@ -285,3 +286,28 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
             )
             self.first_event.setdefault(key, ts)
             self.check_for_match(key)
+
+    def _get_status(self, key):
+        return self._last_status.get(key)
+
+    def _set_status(self, key, value):
+        self._last_status[key] = value
+        self._save_status()
+
+    def _load_status(self):
+        if not self._cache_path:
+            return {}
+        try:
+            with open(self._cache_path, 'r') as jsonf:
+                return json.load(jsonf)
+        except IOError:
+            return {}
+
+    def _save_status(self):
+        if not self._cache_path:
+            return
+        try:
+            with open(self._cache_path, 'w') as jsonf:
+                return json.dump(self._last_status, jsonf)
+        except IOError:
+            pass
