@@ -125,11 +125,13 @@ class ProfiledFrequencyRule(FrequencyRule):
 
         try:
             if not (self._update_ts <= now < self._update_ts + UPDATE_INTERVAL):
+                # Check if updated
                 ts = os.path.getmtime(profile_path)
             else:
+                # Skip
                 ts = self._profile_ts
 
-            if ts > self._profile_ts:
+            if ts > self._profile_ts or ts > now:
                 elastalert_logger.info('Reloading profile %s', profile_path)
                 with open(profile_path, 'r') as profile_file:
                     profile = json.load(profile_file)
