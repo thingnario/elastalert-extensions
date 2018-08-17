@@ -19,6 +19,7 @@ from elastalert.ruletypes import FrequencyRule
 
 
 UPDATE_INTERVAL = 60.0
+FORCE_UPDATE_INTERVAL = 86400.0
 
 
 class BlacklistDurationRule(CompareRule):
@@ -132,13 +133,13 @@ class ProfiledFrequencyRule(FrequencyRule):
                 # Skip
                 ts = self._profile_ts
 
-            if ts > self._profile_ts or ts > now:
+            if ts > self._profile_ts or ts > now or now > self._profile_ts + FORCE_UPDATE_INTERVAL:
                 elastalert_logger.info('Reloading profile %s', profile_path)
                 with open(profile_path, 'r') as profile_file:
                     profile = json.load(profile_file)
                     self._profile = {k: timedelta(seconds=profile[k])
                                      for k in profile}
-                    self._profile_ts = ts
+                    self._profile_ts = now
         except (OSError, IOError, ValueError) as e:
             elastalert_logger.error('Cannot load profile %s: %s', profile_path, e)
         return self._profile
