@@ -124,7 +124,7 @@ class ProfiledFrequencyRule(FrequencyRule):
         now = time.time()
 
         try:
-            if now > self._update_ts + UPDATE_INTERVAL:
+            if not (self._update_ts <= now < self._update_ts + UPDATE_INTERVAL):
                 ts = os.path.getmtime(profile_path)
             else:
                 ts = self._profile_ts
