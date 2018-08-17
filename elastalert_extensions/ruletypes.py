@@ -127,6 +127,7 @@ class ProfiledFrequencyRule(FrequencyRule):
             if not (self._update_ts <= now < self._update_ts + UPDATE_INTERVAL):
                 # Check if updated
                 ts = os.path.getmtime(profile_path)
+                self._update_ts = now
             else:
                 # Skip
                 ts = self._profile_ts
@@ -138,7 +139,6 @@ class ProfiledFrequencyRule(FrequencyRule):
                     self._profile = {k: timedelta(seconds=profile[k])
                                      for k in profile}
                     self._profile_ts = ts
-                    self._update_ts = now
         except (OSError, IOError, ValueError) as e:
             elastalert_logger.error('Cannot load profile %s: %s', profile_path, e)
         return self._profile
