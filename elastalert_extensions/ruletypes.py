@@ -60,7 +60,7 @@ class BlacklistDurationRule(CompareRule):
                 # If using timeframe, only return true if the time delta is < timeframe
                 if key in self.occurrence_time:
                     changed = (event[self.rules['timestamp_field']] - self.occurrence_time[key] <=
-                               self.rules['timeframe'])
+                               self.timeframe(key))
                     old_time = self.occurrence_time[key]
                     new_time = event[self.rules['timestamp_field']]
                     duration = new_time - old_time
