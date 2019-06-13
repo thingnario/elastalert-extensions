@@ -291,6 +291,7 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
             )
             self.first_event.setdefault(key, ts)
             self.check_for_match(key)
+        super(ProfiledThresholdRule, self).garbage_collect(ts)
 
     def _get_status(self, key):
         return self._last_status.get(key)
