@@ -251,6 +251,8 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
             # in the timestamp field of the last event
             event = copy.deepcopy(self.occurrences[key].data[-1][0])
             event.update(key=key, count=count, status=status)
+            if (status == self.below):
+                event.update({self.ts_field: event[self.ts_field] - self.timeframe(key)})
             self.add_match(event)
 
             # After adding this match, leave the occurrences windows alone since it will
@@ -289,6 +291,7 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
             )
             self.first_event.setdefault(key, ts)
             self.check_for_match(key)
+        super(ProfiledThresholdRule, self).garbage_collect(ts)
 
     def _get_status(self, key):
         return self._last_status.get(key)
