@@ -80,7 +80,7 @@ class AmqpAlerter(alerts.Alerter):
         }
         if not params['password']:
             with open(path.join('/', 'config', params['username']), 'r') as pwd_file:
-                params['password'] = pwd_file.read()
+                params['password'] = pwd_file.read().strip()
         self._url = (
             'amqp://{username}:{password}@{host}:{port}/{vhost}'
             .format(**params)
