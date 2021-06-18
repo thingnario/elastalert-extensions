@@ -253,6 +253,8 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
             event.update(key=key, count=count, status=status)
             if (status == self.below):
                 event.update({self.ts_field: event[self.ts_field] - self.timeframe(key)})
+            if self.attach_related:
+                event['related_events'] = [data[0] for data in self.occurrences[key].data[:-1]]
             self.add_match(event)
 
             # After adding this match, leave the occurrences windows alone since it will
