@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import copy
 from datetime import timedelta
+from functools import partial
 import json
 import os.path
 import time
@@ -115,6 +116,10 @@ class ProfiledFrequencyRule(FrequencyRule):
         self._profile = {}
         self._profile_ts = 0.0
         self._update_ts = 0.0
+        self._last_seen = {}
+        self._on_removed_binded = {}
+        for key, window in self.occurrences.iteritems():
+            window.onRemoved = self._get_on_removed(key)
 
     def timeframe(self, key):
         return self.profile.get(key, self.rules['timeframe'])
@@ -154,7 +159,7 @@ class ProfiledFrequencyRule(FrequencyRule):
         event = ({self.ts_field: ts}, count)
         self.occurrences.setdefault(
             'all',
-            EventWindow(self.timeframe('all'), getTimestamp=self.get_ts)
+            EventWindow(self.timeframe('all'), getTimestamp=self.get_ts, onRemoved=self._get_on_removed('all'))
         ).append(event)
         self.check_for_match('all')
 
@@ -165,7 +170,7 @@ class ProfiledFrequencyRule(FrequencyRule):
                           self.rules['query_key']: bucket['key']}, bucket['doc_count'])
                 self.occurrences.setdefault(
                     bucket['key'],
-                    EventWindow(self.timeframe(bucket['key']), getTimestamp=self.get_ts)
+                    EventWindow(self.timeframe(bucket['key']), getTimestamp=self.get_ts, onRemoved=self._get_on_removed(bucket['key']))
                 ).append(event)
                 self.check_for_match(bucket['key'])
 
@@ -184,13 +189,22 @@ class ProfiledFrequencyRule(FrequencyRule):
 
             # Store the timestamps of recent occurrences, per key
             self.occurrences.setdefault(
-                key, EventWindow(self.timeframe(key), getTimestamp=self.get_ts)).append((event, 1))
+                key, EventWindow(self.timeframe(key), getTimestamp=self.get_ts), onRemoved=self._get_on_removed(key)).append((event, 1))
             self.check_for_match(key, end=False)
 
         # We call this multiple times with the 'end' parameter because subclasses
         # may or may not want to check while only partial data has been added
         if key in self.occurrences:  # could have been emptied by previous check
             self.check_for_match(key, end=True)
+
+    def _on_removed(self, key, oldest):
+        self._last_seen[key] = oldest
+
+    def _get_on_removed(self, key):
+        return self._on_removed_binded.setdefault(
+            key,
+            partial(self._on_removed, key),
+        )
 
     def garbage_collect(self, timestamp):
         """ Remove all occurrence data that is beyond the timeframe away """
@@ -252,6 +266,8 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
             event = copy.deepcopy(self.occurrences[key].data[-1][0])
             event.update(key=key, count=count, status=status)
             if (status == self.below):
+                elastalert_logger.info('was %s, substract %s, is %s', event[self.ts_field], self.timeframe(key), event[self.ts_field] - self.timeframe(key))
+                elastalert_logger.info('last_seen: %s', self._last_seen.get(key))
                 event.update({self.ts_field: event[self.ts_field] - self.timeframe(key)})
             if self.attach_related:
                 event['related_events'] = [data[0] for data in self.occurrences[key].data[:-1]]
@@ -287,7 +303,7 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
         for key in self.occurrences.keys() or default:
             self.occurrences.setdefault(
                 key,
-                EventWindow(self.timeframe(key), getTimestamp=self.get_ts)
+                EventWindow(self.timeframe(key), getTimestamp=self.get_ts, onRemoved=self._get_on_removed(key))
             ).append(
                 ({self.ts_field: ts}, 0)
             )
