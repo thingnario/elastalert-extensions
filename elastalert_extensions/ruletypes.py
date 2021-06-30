@@ -266,7 +266,7 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
             event = copy.deepcopy(self.occurrences[key].data[-1][0])
             event.update(key=key, count=count, status=status)
             if (status == self.below):
-                elastalert_logger.info('was %s, substract %s, is %s', event[self.ts_field], self.timeframe(key), event[self.ts_field] - self.timeframe(key))
+                elastalert_logger.info('%s was %s, substract %s, is %s', key, event[self.ts_field], self.timeframe(key), event[self.ts_field] - self.timeframe(key))
                 elastalert_logger.info('last_seen: %s', self._last_seen.get(key))
                 event.update({self.ts_field: event[self.ts_field] - self.timeframe(key)})
             if self.attach_related:
