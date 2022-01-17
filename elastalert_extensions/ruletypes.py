@@ -238,13 +238,15 @@ class ProfiledThresholdRule(ProfiledFrequencyRule):
         if self.first_event.get(key) is None:
             self.first_event[key] = most_recent_ts
 
-        # Don't check for matches until timeframe has elapsed
-        if most_recent_ts - self.first_event[key] < self.timeframe(key):
-            return
-
         # Match if, after removing old events, we hit num_events
         count = self.occurrences[key].count()
         status = self.below if count < self.rules['threshold'] else self.above
+
+        # Don't set to `below` until timeframe has elapsedq
+        # This is copied from FlatlineRule, so only applies to below
+        if status == self.below and \
+                most_recent_ts - self.first_event[key] < self.timeframe(key):
+            return
 
         if status != self._get_status(key):
             # Do a deep-copy, otherwise we lose the datetime type
