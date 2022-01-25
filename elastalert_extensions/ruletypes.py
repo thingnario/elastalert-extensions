@@ -105,7 +105,7 @@ class CompoundBlacklistRule(BlacklistRule):
 
 class ProfiledFrequencyRule(FrequencyRule):
     """ A rule that matches if num_events number of events occur within a timeframe """
-    required_options = frozenset(['num_events', 'timeframe', 'profile'])
+    required_options = frozenset(['num_events', 'timeframe'])
 
     def __init__(self, *args):
         super(ProfiledFrequencyRule, self).__init__(*args)
@@ -121,7 +121,9 @@ class ProfiledFrequencyRule(FrequencyRule):
 
     @property
     def profile(self):
-        profile_path = self.rules['profile']
+        profile_path = self.rules.get('profile')
+        if profile_path is None:
+            return {}
         now = time.time()
 
         try:
@@ -215,7 +217,7 @@ class ProfiledFrequencyRule(FrequencyRule):
 
 class ProfiledThresholdRule(ProfiledFrequencyRule):
     """ A rule that matches when there is a low number of events given a timeframe. """
-    required_options = frozenset(['threshold', 'timeframe', 'profile'])
+    required_options = frozenset(['threshold', 'timeframe'])
 
     def __init__(self, *args):
         super(ProfiledThresholdRule, self).__init__(*args)

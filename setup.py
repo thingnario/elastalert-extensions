@@ -6,7 +6,7 @@ from setuptools import setup
 base_dir = os.path.dirname(__file__)
 setup(
     name='elastalert-extensions',
-    version='0.1.6',
+    version='0.2.0',
     description='Customized Elastalert rule typs and alerts',
     author='Chun-da Chen',
     author_email='capitalm@thingnario.com',
