@@ -6,7 +6,7 @@ more-itertools==4.3.0
 six==1.11.0
 pathlib2==2.3.2
 pluggy==0.7.1
-py==1.5.4
+py==1.10.0
 pytest==3.7.1
 pytest-cov==2.5.1
 pytest-cover==3.0.0
