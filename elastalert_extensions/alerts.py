@@ -5,11 +5,20 @@ from dateutil import parser
 from elastalert import alerts
 from kombu import Connection, Exchange
 from kombu.pools import producers
+import kombu.serialization
+from kombu.utils import json as _json
 from os import environ, path
 from pytz import timezone
 
 
 utc = timezone('UTC')
+kombu.serialization.registry.register(
+    'utf8json',
+    lambda x: _json.dumps(x, ensure_ascii=False, encoding='utf8'),
+    _json.loads,
+    content_type='application/json',
+    content_encoding='utf-8'
+)
 
 
 def parse_time(s):
@@ -107,7 +116,7 @@ class AmqpAlerter(alerts.Alerter):
                     'match': match,
                 }
                 producer.publish(body,
-                                 serializer='json',
+                                 serializer='utf8json',
                                  exchange=self._exchange,
                                  routing_key=self._routing_key)
 
